@@ -47,7 +47,7 @@ export default function MovicAi() {
     setInput("");
 
     try {
-      const result = await axios.post("https://movicai.onrender.com/api/movicai", {
+      const result = await axios.post("https://movicai.onrender.com /api/movicai", {
         prompt: userMsg.text,
       });
       const bot = {
@@ -95,7 +95,7 @@ export default function MovicAi() {
   };
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e0e5ec] via-[#d1d9e6] to-[#e0e5ec] p-2 sm:p-6 text-slate-800 flex flex-col">
-      <div className="relative flex-1 md:w-6xl mx-auto rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-12">
+      <div className="relative flex-1 max-w-6xl mx-auto rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-12">
         {/* Sidebar overlay for mobile */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 flex sm:hidden">
@@ -237,7 +237,7 @@ export default function MovicAi() {
           </header>
 
           <div className="flex-1 rounded-xl bg-[#e0e5ec] shadow-neumorph-inset p-4 ">
-            <div ref={listRef} className="flex flex-col-reverse gap-3 overflow-y-auto h-96 p-4">
+            <div ref={listRef} className="flex flex-col-reverse gap-3 overflow-y-auto md:h-96 h-screen p-4">
               {messages.length === 0 ? (
                 <div className="text-center text-slate-600 mt-8 p-4 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset">
                   No messages — say hi 👋
@@ -279,7 +279,7 @@ export default function MovicAi() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
-                placeholder="Type your message... (Shift+Enter = new line)"
+                placeholder="Type your message... "
                 disabled={isLoading}
                 className="flex-1 resize-none bg-transparent outline-none text-slate-800 placeholder:text-slate-500 max-h-36 text-sm sm:text-base"
               />
