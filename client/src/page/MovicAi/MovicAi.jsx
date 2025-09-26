@@ -4,7 +4,7 @@ import { Mic, ArrowUp, Clock, Trash2, MessageCircle, History, User, Menu, X, Vol
 
 export default function MovicAi() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([] );
   const [history, setHistory] = useState([]);
   
   // Function to start a new chat
@@ -21,11 +21,10 @@ export default function MovicAi() {
       setMessages([]);
     }
   };
-  const [recording, setRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [historyVisible, setHistoryVisible] = useState(true); // New state for desktop history
+  const [historyVisible, setHistoryVisible] = useState(true); 
   const listRef = useRef(null);
 
   const sendMessage = async () => {
@@ -80,9 +79,23 @@ export default function MovicAi() {
     }
   }, [messages]);
 
+  // For Speak functionality
+  const handleSpeak = () => {
+    const msg = new SpeechSynthesisUtterance();
+    const voices = window.speechSynthesis.getVoices();
+    console.log(voices); 
+
+    msg.voice = voices[1];
+    msg.volume = 0.6; 
+    msg.rate = 0.5;   
+    msg.text = input;
+    msg.lang = "en-US";
+
+    window.speechSynthesis.speak(msg);
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e0e5ec] via-[#d1d9e6] to-[#e0e5ec] p-2 sm:p-6 text-slate-800 flex flex-col">
-      <div className="relative flex-1 max-w-6xl mx-auto rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-12">
+      <div className="relative flex-1 md:w-6xl mx-auto rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-12">
         {/* Sidebar overlay for mobile */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 flex sm:hidden">
@@ -254,12 +267,8 @@ export default function MovicAi() {
           <div className="mt-4">
             <div className="bg-[#e0e5ec] rounded-2xl p-3 shadow-neumorph-outset flex items-center gap-3">
               <button
-                onClick={() => setRecording(r => !r)}
-                className={`p-3 rounded-lg transition-all ${
-                  recording 
-                    ? 'bg-red-500 text-white shadow-neumorph-inset' 
-                    : 'bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset'
-                }`}
+                className="p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all"
+                onClick={handleSpeak}
                 aria-label="Toggle recording"
               >
                 <Mic className="w-5 h-5" />
