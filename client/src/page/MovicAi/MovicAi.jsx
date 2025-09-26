@@ -47,7 +47,7 @@ export default function MovicAi() {
     setInput("");
 
     try {
-      const result = await axios.post("http://localhost:5000/api/movicai", {
+      const result = await axios.post("https://movicai.onrender.com/api/movicai", {
         prompt: userMsg.text,
       });
       const bot = {
