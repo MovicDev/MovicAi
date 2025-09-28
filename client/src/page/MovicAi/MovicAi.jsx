@@ -1,63 +1,115 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { Mic, ArrowUp, Clock, Trash2, MessageCircle, History, User, Menu, X, Volume2 } from "lucide-react";
+import {
+  Mic,
+  ArrowUp,
+  Clock,
+  Trash2,
+  MessageCircle,
+  History,
+  User,
+  Menu,
+  X,
+  Copy,
+} from "lucide-react";
 
 export default function MovicAi() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([] );
-  const [history, setHistory] = useState([]);
-  
-  // Function to start a new chat
+  const [messages, setMessages] = useState([]);
+  const [history, setHistory] = useState(() => {
+    const savedHistory = localStorage.getItem("chatHistory");
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("chatHistory", JSON.stringify(history));
+  }, [history]);
   const startNewChat = () => {
     if (messages.length > 0) {
-      // Add current conversation to history before clearing
-      const lastMessage = messages[0];
-      if (lastMessage) {
-        setHistory(prev => [{
-          id: Date.now(),
-          title: lastMessage.text.slice(0, 30) + (lastMessage.text.length > 30 ? '...' : '')
-        }, ...prev]);
-      }
+      const firstMessage = messages[0]?.text || "";
+      const conversation = {
+        id: Date.now(),
+        title:
+          firstMessage.slice(0, 30) + (firstMessage.length > 30 ? "..." : "") ||
+          "New Chat",
+        messages: [...messages],
+        timestamp: new Date().toISOString(),
+      };
+      setHistory((prev) => [conversation, ...prev]);
       setMessages([]);
+    } else {
+      setMessages([]);
+    }
+  };
+
+  // Load a conversation from history
+  const loadConversation = (conversationId) => {
+    const conversation = history.find((conv) => conv.id === conversationId);
+    if (conversation) {
+      setMessages(conversation.messages);
+      setSidebarOpen(false);
+    }
+  };
+
+  //Top Clear hostory
+  const clearHistory = () => {
+    if (window.confirm("Are you sure you want to clear all chat history?")) {
+      setHistory([]);
+      localStorage.removeItem("chatHistory");
     }
   };
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [historyVisible, setHistoryVisible] = useState(true); 
-  const listRef = useRef(null);
+  const [historyVisible, setHistoryVisible] = useState(true);
 
   const sendMessage = async () => {
     if (!input.trim()) {
       return;
     }
-    
-    // If this is the first message in a new conversation, add to history
+
+    // If this is the first message in a new conversation, create a new conversation entry
     if (messages.length === 0) {
-      setHistory(prev => [{
+      const newConversation = {
         id: Date.now(),
-        title: input.trim().slice(0, 30) + (input.trim().length > 30 ? '...' : '')
-      }, ...prev]);
+        title:
+          input.trim().slice(0, 30) + (input.trim().length > 30 ? "..." : ""),
+        messages: [],
+        timestamp: new Date().toISOString(),
+      };
+      setHistory((prev) => [newConversation, ...prev]);
     }
 
     setError("");
     setIsLoading(true);
     const userMsg = { id: Date.now(), role: "user", text: input.trim() };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
     try {
-      const result = await axios.post("https://movicai.onrender.com /api/movicai", {
-        prompt: userMsg.text,
-      });
+      const result = await axios.post(
+        "https://movicai.onrender.com/api/movicai",
+        {
+          prompt: userMsg.text,
+        }
+      );
       const bot = {
         id: Date.now() + 1,
         role: "assistant",
         text: result.data.response,
       };
-      setMessages(prev => [...prev, bot]);
-      setHistory(h => [{ id: `h${Date.now()}`, title: userMsg.text.slice(0, 24) }, ...h]);
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+      setMessages((prev) => [...prev, bot]);
+      // Update the current conversation in history
+      setHistory((prev) => {
+        const updatedHistory = [...prev];
+        if (updatedHistory.length > 0) {
+          updatedHistory[0] = {
+            ...updatedHistory[0],
+            messages: [...updatedHistory[0].messages, userMsg, bot],
+          };
+        }
+        return updatedHistory;
+      });
     } catch (err) {
       console.error("Error generating response:", err);
       setError(err.response?.data?.error || "Failed to get response");
@@ -66,28 +118,23 @@ export default function MovicAi() {
     }
   };
 
-  const handleKeyDown = e => {
+  const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
-
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
-  }, [messages]);
+  [messages];
 
   // For Speak functionality
   const handleSpeak = () => {
     const msg = new SpeechSynthesisUtterance();
     const voices = window.speechSynthesis.getVoices();
-    console.log(voices); 
+    console.log(voices);
 
     msg.voice = voices[1];
-    msg.volume = 0.6; 
-    msg.rate = 0.5;   
+    msg.volume = 0.6;
+    msg.rate = 0.5;
     msg.text = input;
     msg.lang = "en-US";
 
@@ -99,14 +146,17 @@ export default function MovicAi() {
         {/* Sidebar overlay for mobile */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 flex sm:hidden">
-            <div className="bg-black/20 flex-1" onClick={() => setSidebarOpen(false)}></div>
+            <div
+              className="bg-black/20 flex-1"
+              onClick={() => setSidebarOpen(false)}
+            ></div>
             <aside className="w-64 bg-[#e0e5ec] p-4 flex flex-col gap-4 z-50 shadow-2xl">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <History className="w-5 h-5 text-teal-600" />
                   History
                 </h3>
-                <button 
+                <button
                   onClick={() => setSidebarOpen(false)}
                   className="p-1 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset hover:shadow-neumorph-outset transition-all"
                 >
@@ -115,25 +165,31 @@ export default function MovicAi() {
               </div>
               <div className="flex-1 overflow-auto space-y-2">
                 {history.length === 0 ? (
-                  <div className="text-xs text-slate-600 p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset">No history yet.</div>
+                  <div className="text-xs text-slate-600 p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset">
+                    No history yet.
+                  </div>
                 ) : (
-                  history.map(item => (
-                    <button 
-                      key={item.id} 
-                      className="w-full text-left p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all flex items-center gap-3"
-                      onClick={() => alert(`Load conversation: ${item.title}`)}
+                  history.map((item) => (
+                    <button
+                      key={item.id}
+                      className="w-full text-left px-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all flex items-center gap-3"
+                      onClick={() => loadConversation(item.id)}
                     >
                       <User className="w-5 h-5 text-teal-600" />
                       <div>
-                        <div className="text-sm font-medium truncate">{item.title}</div>
-                        <div className="text-xs text-slate-600">{new Date().toLocaleDateString()}</div>
+                        <div className="text-sm font-medium truncate">
+                          {item.title}
+                        </div>
+                        <div className="text-xs text-slate-600">
+                          {new Date().toLocaleDateString()}
+                        </div>
                       </div>
                     </button>
                   ))
                 )}
               </div>
-              <button 
-                onClick={() => setHistory([])} 
+              <button
+                onClick={clearHistory}
                 className="mt-4 text-xs p-2 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all flex items-center gap-2 justify-center"
               >
                 <Trash2 className="w-4 h-4" />
@@ -161,7 +217,7 @@ export default function MovicAi() {
                 </button>
                 <button
                   className="p-2 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all"
-                  onClick={() => setHistory([])}
+                  onClick={clearHistory}
                   aria-label="Clear history"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -174,23 +230,33 @@ export default function MovicAi() {
                   No history yet — start a conversation.
                 </div>
               ) : (
-                history.map(item => (
+                history.map((item) => (
                   <button
                     key={item.id}
-                    className="w-full p-3  rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all flex items-center gap-3 "
-                    onClick={() => alert(`Load conversation: ${item.title}`)}
+                    className="w-full p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all flex items-center gap-3"
+                    onClick={() => loadConversation(item.id)}
                   >
                     <User className="w-5 h-5 text-teal-600" />
                     <div>
-                      <div className="text-sm font-medium truncate">{item.title}</div>
-                      <div className="text-xs text-slate-600">{new Date().toLocaleDateString()}</div>
+                      <div className="text-sm font-medium truncate">
+                        {item.title}
+                      </div>
+                      <div className="text-xs text-slate-600">
+                        {new Date(item.timestamp).toLocaleString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
                     </div>
                   </button>
                 ))
               )}
             </div>
             <div className="pt-2">
-              <button 
+              <button
                 onClick={startNewChat}
                 className="w-full bg-[#001f3f] text-white py-2 rounded-lg font-semibold shadow-neumorph-outset hover:shadow-neumorph-inset transition-all"
               >
@@ -201,18 +267,22 @@ export default function MovicAi() {
         )}
 
         {/* Main Chat */}
-        <main className={`col-span-1 ${historyVisible ? 'sm:col-span-9' : 'sm:col-span-12'} p-4 sm:p-6 flex flex-col bg-[#e0e5ec]`}>
+        <main
+          className={`col-span-1 ${
+            historyVisible ? "sm:col-span-9" : "sm:col-span-12"
+          } p-4 sm:p-6 flex flex-col bg-[#e0e5ec]`}
+        >
           <header className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 className="sm:hidden p-2 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all"
                 onClick={() => setSidebarOpen(true)}
               >
                 <Menu className="w-5 h-5" />
               </button>
-              {/* Show history toggle button on desktop when history is hidden */}
+              {/* Showing the History toggle on mobile screen */}
               {!historyVisible && (
-                <button 
+                <button
                   className="hidden sm:flex p-2 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all"
                   onClick={() => setHistoryVisible(true)}
                   aria-label="Show history"
@@ -225,7 +295,9 @@ export default function MovicAi() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold">Movic AI Chat</h2>
-                <p className="text-xs text-slate-600">Fast. Helpful. Delightful.</p>
+                <p className="text-xs text-slate-600">
+                  Fast. Helpful. Delightful.
+                </p>
               </div>
             </div>
             <div className="hidden sm:flex items-center gap-4 text-slate-600">
@@ -237,27 +309,45 @@ export default function MovicAi() {
           </header>
 
           <div className="flex-1 rounded-xl bg-[#e0e5ec] shadow-neumorph-inset p-4 ">
-            <div ref={listRef} className="flex flex-col-reverse gap-3 overflow-y-auto md:h-96 h-screen p-4">
+            <div className="flex flex-col-reverse gap-3 overflow-y-auto h-96  p-4">
               {messages.length === 0 ? (
                 <div className="text-center text-slate-600 mt-8 p-4 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset">
                   No messages — say hi 👋
                 </div>
               ) : (
-                [...messages].reverse().map(msg => (
-                  <div 
-                    key={msg.id} 
+                [...messages].reverse().map((msg) => (
+                  <div
+                    key={msg.id}
                     className={`p-4 rounded-lg max-w-[90%] shadow-neumorph-outset ${
-                      msg.role === 'assistant' 
-                        ? 'bg-[#001f3f] text-white self-start' 
-                        : 'bg-[#001f3f] text-white self-end'
+                      msg.role === "assistant"
+                        ? "bg-[#001f3f] text-white self-start"
+                        : "bg-[#001f3f] text-white self-end"
                     }`}
                   >
                     <div className="text-sm whitespace-pre-line break-words min-w-[200px]">
-                      {msg.role === 'assistant' ? msg.text.replace(/^\*\*A Little More Romantic:\*\*|\*\*A Little More Romantic:\*\*$/g, '') : msg.text}
+                      {msg.role === "assistant"
+                        ? msg.text.replace(/\*/g, "")
+                        : msg.text}
                     </div>
                     <div className="text-xs text-slate-600 mt-2">
-                      {msg.role === 'assistant' ? 'Assistant' : 'You'}
+                      {msg.role === "assistant" ? "Movic Assistant" : "You"}
                     </div>
+                    {msg.role === "assistant" && (
+                      <button
+                        onClick={() => {
+                          const clean = msg.text.replace(/\*/g, "");
+                          navigator.clipboard
+                            .writeText(clean)
+                            .then(() => console.log("Copied:", clean)) 
+                            .catch((err) => console.error("Copy failed", err));
+                        }}
+                        title="Copy to clipboard"
+                        className="ml-2 text-xs mt-4 text-white px-2 py-1 rounded hover:bg-gray-700"
+                        aria-label="Copy message"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -276,7 +366,7 @@ export default function MovicAi() {
 
               <textarea
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
                 placeholder="Type your message... "
@@ -287,7 +377,6 @@ export default function MovicAi() {
               <button
                 title="Attach"
                 className="p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all"
-                onClick={() => alert('Attach file — implement as needed')}
               >
                 <MessageCircle className="w-5 h-5" />
               </button>
@@ -305,7 +394,11 @@ export default function MovicAi() {
                 )}
               </button>
             </div>
-            {error && <div className="mt-2 text-red-500 text-sm p-2 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset">{error}</div>}
+            {error && (
+              <div className="mt-2 text-red-500 text-sm p-2 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset">
+                {error}
+              </div>
+            )}
           </div>
         </main>
       </div>
@@ -315,11 +408,11 @@ export default function MovicAi() {
         .shadow-neumorph-outset {
           box-shadow: 8px 8px 16px #b8b9be, -8px -8px 16px #ffffff;
         }
-        
+
         .shadow-neumorph-inset {
           box-shadow: inset 8px 8px 16px #b8b9be, inset -8px -8px 16px #ffffff;
         }
-        
+
         .shadow-2xl {
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
