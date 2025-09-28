@@ -12,10 +12,12 @@ import {
   X,
   Copy,
 } from "lucide-react";
+import MessageCopyButton from "../../components/MessageCopy";
 
 export default function MovicAi() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const [speaking, setSpeaking] = useState(false);
   const [history, setHistory] = useState(() => {
     const savedHistory = localStorage.getItem("chatHistory");
     return savedHistory ? JSON.parse(savedHistory) : [];
@@ -68,7 +70,7 @@ export default function MovicAi() {
       return;
     }
 
-    // If this is the first message in a new conversation, create a new conversation entry
+    //creating new chat if no messages exist
     if (messages.length === 0) {
       const newConversation = {
         id: Date.now(),
@@ -127,6 +129,10 @@ export default function MovicAi() {
   [messages];
 
   // For Speak functionality
+  const handleClick = () => {
+    setSpeaking((prev) => !prev);        
+    handleSpeak();                         
+  };
   const handleSpeak = () => {
     const msg = new SpeechSynthesisUtterance();
     const voices = window.speechSynthesis.getVoices();
@@ -142,7 +148,7 @@ export default function MovicAi() {
   };
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e0e5ec] via-[#d1d9e6] to-[#e0e5ec] p-2 sm:p-6 text-slate-800 flex flex-col">
-      <div className="relative flex-1 max-w-6xl mx-auto rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-12">
+      <div className="relative flex-1 w-full max-w-6xl mx-auto rounded-2xl overflow-hidden grid grid-cols-1 sm:grid-cols-12 px-4 sm:px-6">
         {/* Sidebar overlay for mobile */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 flex sm:hidden">
@@ -153,7 +159,7 @@ export default function MovicAi() {
             <aside className="w-64 bg-[#e0e5ec] p-4 flex flex-col gap-4 z-50 shadow-2xl">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <History className="w-5 h-5 text-teal-600" />
+                  <History className="w-5 h-5 text-[#001f3f]" />
                   History
                 </h3>
                 <button
@@ -175,7 +181,7 @@ export default function MovicAi() {
                       className="w-full text-left px-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all flex items-center gap-3"
                       onClick={() => loadConversation(item.id)}
                     >
-                      <User className="w-5 h-5 text-teal-600" />
+                      <User className="w-5 h-5 text-[#001f3f]" />
                       <div>
                         <div className="text-sm font-medium truncate">
                           {item.title}
@@ -204,7 +210,7 @@ export default function MovicAi() {
           <aside className="hidden sm:flex sm:col-span-3 bg-[#e0e5ec] p-4 flex-col gap-4 shadow-2xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <History className="w-5 h-5 text-teal-600" />
+                <History className="w-5 h-5 text-[#001f3f]" />
                 <h3 className="text-sm font-semibold">History</h3>
               </div>
               <div className="flex gap-2">
@@ -233,10 +239,18 @@ export default function MovicAi() {
                 history.map((item) => (
                   <button
                     key={item.id}
-                    className="w-full p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all flex items-center gap-3"
+                    className=" p-3 my-2 mx-4 transition-all flex items-center gap-3 "
+                    style={{
+                      width: "87%",
+                      borderRadius: "10px",
+                      background: "linear-gradient(225deg, #cacaca, #f0f0f0)",
+                      boxShadow: "-15px 15px 30px #898989, 15px -15px 30px #ffffff",
+                    }}
+
                     onClick={() => loadConversation(item.id)}
+                    
                   >
-                    <User className="w-5 h-5 text-teal-600" />
+                    <User className="w-5 h-5 text-[#001f3f]" />
                     <div>
                       <div className="text-sm font-medium truncate">
                         {item.title}
@@ -309,10 +323,12 @@ export default function MovicAi() {
           </header>
 
           <div className="flex-1 rounded-xl bg-[#e0e5ec] shadow-neumorph-inset p-4 ">
-            <div className="flex flex-col-reverse gap-3 overflow-y-auto h-96  p-4">
+            <div
+              className=" flex flex-col-reverse gap-3 overflow-y-auto p-4 custom-scroll h-[75vh] sm:h-[70vh] md:h-[60vh]"
+            >
               {messages.length === 0 ? (
                 <div className="text-center text-slate-600 mt-8 p-4 rounded-lg bg-[#e0e5ec] shadow-neumorph-inset">
-                  No messages — say hi 👋
+                  No messages — say hi to Movic AI!
                 </div>
               ) : (
                 [...messages].reverse().map((msg) => (
@@ -333,20 +349,7 @@ export default function MovicAi() {
                       {msg.role === "assistant" ? "Movic Assistant" : "You"}
                     </div>
                     {msg.role === "assistant" && (
-                      <button
-                        onClick={() => {
-                          const clean = msg.text.replace(/\*/g, "");
-                          navigator.clipboard
-                            .writeText(clean)
-                            .then(() => console.log("Copied:", clean)) 
-                            .catch((err) => console.error("Copy failed", err));
-                        }}
-                        title="Copy to clipboard"
-                        className="ml-2 text-xs mt-4 text-white px-2 py-1 rounded hover:bg-gray-700"
-                        aria-label="Copy message"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
+                      <MessageCopyButton text={msg.text} />
                     )}
                   </div>
                 ))
@@ -357,21 +360,30 @@ export default function MovicAi() {
           <div className="mt-4">
             <div className="bg-[#e0e5ec] rounded-2xl p-3 shadow-neumorph-outset flex items-center gap-3">
               <button
-                className="p-3 rounded-lg bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset transition-all"
-                onClick={handleSpeak}
-                aria-label="Toggle recording"
-              >
-                <Mic className="w-5 h-5" />
-              </button>
+        onClick={handleClick}
+        aria-label="Toggle speaking"
+        className={`
+          p-3 rounded-lg transition-all
+          ${speaking
+            ? "bg-red-800 text-white shadow-neumorph-inset"
+            : "bg-[#e0e5ec] shadow-neumorph-outset hover:shadow-neumorph-inset"}
+        `}
+      >
+        <Mic className={`w-5 h-5 ${speaking ? "text-white" : "text-gray-700"}`} />
+      </button>
 
               <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 onKeyDown={handleKeyDown}
                 rows={1}
                 placeholder="Type your message... "
                 disabled={isLoading}
-                className="flex-1 resize-none bg-transparent outline-none text-slate-800 placeholder:text-slate-500 max-h-36 text-sm sm:text-base"
+                className="flex-1 resize-none bg-transparent outline-none text-slate-800 placeholder:text-slate-500 max-h-36 text-sm sm:text-base custom-scroll"
               />
 
               <button
